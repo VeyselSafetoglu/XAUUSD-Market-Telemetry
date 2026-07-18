@@ -1,55 +1,38 @@
-def fetch_xauusd_data():
-    print("XAUUSD verileri çekiliyor...")
-    ticker = "XAUUSD=X"
-    
-    try:
-        gold = yf.Ticker(ticker)
-        hist = gold.history(period="5d")
-        
-        if hist.empty:
-            print("Uyarı: yfinance'ten veri alınamadı.")
-            # Boş dosya oluştur (iş akışının devam etmesini sağla)
-            os.makedirs("data", exist_ok=True)
-            with open("data/xauusd_daily.json", "w", encoding="utf-8") as f:
-                json.dump([], f, indent=4)
-            return
-        
-        # Verileri işle ve kaydet
-        latest = hist.iloc[-1]
-        data = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "symbol": "XAUUSD",
-            "close": round(latest["Close"], 3),
-            "open": round(latest["Open"], 3),
-            "high": round(latest["High"], 3),
-            "low": round(latest["Low"], 3),
-            "volume": int(latest["Volume"]) if pd.notna(latest["Volume"]) else 0
-        }
-        
-        os.makedirs("data", exist_ok=True)
-        filepath = "data/xauusd_daily.json"
-        existing_data = []
-        
-        if os.path.exists(filepath):
-            with open(filepath, "r", encoding="utf-8") as f:
-                try:
-                    existing_data = json.load(f)
-                except json.JSONDecodeError:
-                    pass
-        
-        existing_data.append(data)
-        
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(existing_data, f, indent=4)
-        
-        print(f"Başarılı! {data['timestamp']} için veri kaydedildi -> Kapanış: {data['close']}")
-        
-    except Exception as e:
-        print(f"Hata oluştu: {e}")
-        # Hata durumunda da dosya oluştur
-        os.makedirs("data", exist_ok=True)
-        with open("data/xauusd_daily.json", "w", encoding="utf-8") as f:
-            json.dump([], f, indent=4)
+name: XAUUSD Daily Telemetry
 
-if __name__ == "__main__":
-    fetch_xauusd_data()
+on:
+  schedule:
+    # 21:00 UTC = 00:00 Turkey (GMT+3)
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch Market Data
+        run: python fetch_data.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A data/
+          git diff --cached --quiet || git commit -m "chore(data): daily XAUUSD telemetry update [$(date -u +%Y-%m-%d)]"
+          git push
