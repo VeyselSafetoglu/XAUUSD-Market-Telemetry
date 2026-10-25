@@ -1021,5 +1021,16 @@
         "low": 3989.1,
         "close": 4007.9,
         "volume": 214607
+    },
+    {
+        "date": "2026-10-25",
+        "timestamp": "2026-10-25 23:07:59 UTC",
+        "symbol": "XAUUSD",
+        "source_ticker": "GC=F",
+        "open": 4012.2,
+        "high": 4017.9,
+        "low": 4005.5,
+        "close": 4014.3,
+        "volume": 2478
     }
 ]
